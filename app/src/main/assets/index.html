@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>MarTech Pesca</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+:root{--navy:#061d2e;--blue:#087ca8}
+*{box-sizing:border-box}html,body,#map{margin:0;width:100%;height:100%;overflow:hidden;font-family:Arial,sans-serif}
+.top{position:absolute;top:14px;left:14px;right:14px;z-index:1000;display:flex;justify-content:space-between}
+.logo,.icon,.tool,.bottom,.drawer,.modal{background:#071d2eef;color:#fff;box-shadow:0 4px 18px #0008}
+.logo{border-radius:12px;padding:10px 14px}.logo b{font-size:17px}.logo small{display:block;color:#8ddcf1;margin-top:2px}
+.icon,.tool{border:0;border-radius:12px;width:50px;height:50px;color:#fff;font-size:22px}
+.tools{position:absolute;top:80px;right:14px;z-index:1000;display:flex;flex-direction:column;gap:7px}
+.info{position:absolute;top:74px;left:50%;transform:translateX(-50%);z-index:1000;background:#f4f5f1ee;color:#111;border-radius:8px;padding:8px 13px;font:13px monospace;white-space:nowrap}
+.cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:54px;height:54px;z-index:900;pointer-events:none}
+.cross:before,.cross:after{content:"";position:absolute;background:#fff;box-shadow:0 1px 4px #000}.cross:before{width:2px;height:54px;left:26px}.cross:after{height:2px;width:54px;top:26px}
+.bottom{position:absolute;left:10px;right:10px;bottom:10px;z-index:1000;border-radius:15px;padding:10px}
+.chips{display:flex;gap:7px;overflow-x:auto;padding-bottom:7px}.chip{flex:0 0 auto;border:1px solid #ffffff28;border-radius:10px;background:#10364d;color:#fff;padding:10px 12px;font-size:13px}.chip.active{background:#087ca8}
+.read{display:flex;gap:8px}.metric{flex:1;background:#ffffff10;border-radius:10px;padding:8px}.metric span{display:block;font-size:10px;color:#9bc4d4}.metric b{font-size:14px}
+.drawer{position:absolute;left:0;top:0;bottom:0;width:86%;max-width:380px;z-index:2000;transform:translateX(-105%);transition:.25s;padding:22px 18px}.drawer.open{transform:translateX(0)}.drawer button{width:100%;text-align:left;border:0;color:#fff;background:#10364d;margin:5px 0;padding:14px;border-radius:10px;font-size:15px}.close{float:right;background:none!important;width:auto!important;padding:0!important;font-size:24px}
+.modal{position:absolute;left:10px;right:10px;bottom:100px;z-index:1800;display:none;background:#f7f8f8;color:#111;border-radius:15px;padding:16px}.modal.open{display:block}.modal input{width:100%;padding:12px;margin:8px 0;border:1px solid #ccd4d8;border-radius:8px}.modal button{padding:11px 14px;border:0;border-radius:9px;background:#087ca8;color:white;font-weight:bold}
+.dot{width:18px;height:18px;background:#00d4ff;border:4px solid #fff;border-radius:50%;box-shadow:0 0 0 7px #00bde844}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="top"><div class="logo"><b>⚓ MarTech Pesca</b><small>Pesca artesanal · Chile</small></div><button class="icon" onclick="drawer()">☰</button></div>
+<div class="tools">
+<button class="tool" onclick="map.zoomIn()">＋</button>
+<button class="tool" onclick="map.zoomOut()">−</button>
+<button class="tool" onclick="locate()">◎</button>
+<button class="tool" onclick="layer('bathymetry')">⌁</button>
+</div>
+<div class="info" id="coords">GPS esperando…</div><div class="cross"></div>
+<div class="bottom">
+<div class="chips">
+<button class="chip active" onclick="layer('sst')">🌡️ Temperatura</button>
+<button class="chip" onclick="layer('chlorophyll')">🟢 Clorofila</button>
+<button class="chip" onclick="layer('currents')">🌊 Corrientes</button>
+<button class="chip" onclick="layer('wind')">🌬️ Viento</button>
+<button class="chip" onclick="layer('bathymetry')">🗺️ Batimetría</button>
+<button class="chip" onclick="openPoint()">📍 Punto</button>
+</div>
+<div class="read"><div class="metric"><span>CAPA</span><b id="lname">Temperatura</b></div><div class="metric"><span>VELOCIDAD</span><b id="speed">0.0 kn</b></div><div class="metric"><span>RUMBO</span><b id="heading">—</b></div></div>
+</div>
+<div id="drawerPanel" class="drawer">
+<button class="close" onclick="drawer()">✕</button><h2>MarTech Pesca</h2><p>Inteligencia oceánica y navegación para pesca artesanal.</p>
+<button onclick="layer('sst');drawer()">🌡️ Temperatura del agua</button>
+<button onclick="layer('chlorophyll');drawer()">🟢 Clorofila</button>
+<button onclick="layer('currents');drawer()">🌊 Corrientes</button>
+<button onclick="layer('wind');drawer()">🌬️ Viento y meteo</button>
+<button onclick="layer('bathymetry');drawer()">🗺️ Batimetría</button>
+<button onclick="openPoint();drawer()">📍 Mis puntos</button>
+<button onclick="Android.toast('Módulo de rutas preparado')">🧭 Mis rutas</button>
+<button onclick="Android.toast('Caché offline preparado para la siguiente integración')">📴 Mapas offline</button>
+</div>
+<div id="point" class="modal"><b>Guardar punto de pesca</b><input id="pname" placeholder="Ej: Banco de pesca"><div id="pcoord"></div><br><button onclick="savePoint()">Guardar</button> <button onclick="closePoint()" style="background:#555">Cancelar</button></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const map=L.map('map',{zoomControl:false,preferCanvas:true}).setView([-36.83,-73.05],8);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'}).addTo(map);
+let marker=null,lat=-36.83,lon=-73.05;
+function drawer(){document.getElementById('drawerPanel').classList.toggle('open')}
+function locate(){if(marker)map.setView(marker.getLatLng(),12);else Android.toast('Esperando señal GPS…')}
+function layer(t){const n={sst:'Temperatura',chlorophyll:'Clorofila',currents:'Corrientes',wind:'Viento',bathymetry:'Batimetría'};document.getElementById('lname').textContent=n[t]||t;Android.toast('Capa: '+(n[t]||t))}
+window.setGps=function(a,b,s,h){lat=a;lon=b;document.getElementById('coords').textContent=a.toFixed(5)+' / '+b.toFixed(5);document.getElementById('speed').textContent=s.toFixed(1)+' kn';document.getElementById('heading').textContent=Math.round(h)+'°';if(!marker){marker=L.marker([a,b],{icon:L.divIcon({className:'',html:'<div class="dot"></div>',iconSize:[18,18],iconAnchor:[9,9]})}).addTo(map)}else marker.setLatLng([a,b])}
+map.on('click',e=>{lat=e.latlng.lat;lon=e.latlng.lng;document.getElementById('coords').textContent=lat.toFixed(5)+' / '+lon.toFixed(5)})
+function openPoint(){document.getElementById('pcoord').textContent=lat.toFixed(5)+' / '+lon.toFixed(5);document.getElementById('point').classList.add('open')}
+function closePoint(){document.getElementById('point').classList.remove('open')}
+function savePoint(){const n=document.getElementById('pname').value.trim()||'Punto de pesca';L.marker([lat,lon]).addTo(map).bindPopup('<b>'+n+'</b><br>'+lat.toFixed(5)+' / '+lon.toFixed(5));Android.saveWaypoint(lat,lon,n);Android.toast('Punto guardado');closePoint();document.getElementById('pname').value=''}
+</script>
+</body>
+</html>w
