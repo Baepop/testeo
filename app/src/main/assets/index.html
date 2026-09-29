@@ -72,4 +72,4 @@ function closePoint(){document.getElementById('point').classList.remove('open')}
 function savePoint(){const n=document.getElementById('pname').value.trim()||'Punto de pesca';L.marker([lat,lon]).addTo(map).bindPopup('<b>'+n+'</b><br>'+lat.toFixed(5)+' / '+lon.toFixed(5));Android.saveWaypoint(lat,lon,n);Android.toast('Punto guardado');closePoint();document.getElementById('pname').value=''}
 </script>
 </body>
-</html>w
+</html>s
