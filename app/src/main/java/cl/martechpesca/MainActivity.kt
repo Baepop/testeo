@@ -64,4 +64,3 @@ class MainActivity : Activity() {
                 android.widget.Toast.LENGTH_SHORT).show() }
         }
     }
-}s
